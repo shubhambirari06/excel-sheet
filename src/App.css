@@ -141,3 +141,8 @@
 .dialog-btn.save:hover {
     background-color: #1d4ed8;
 }
+
+.e-spreadsheet .e-spinner-pane,
+.e-spreadsheet .e-spinner-pane .e-spin-label {
+    display: none !important;
+}

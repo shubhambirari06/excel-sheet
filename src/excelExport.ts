@@ -1,109 +1,208 @@
 import ExcelJS from 'exceljs'
+import type { CellFormulaValue } from 'exceljs'
 import { saveAs } from 'file-saver'
 
 export async function exportSpreadsheetToXlsx(
-    jsonResponse: unknown,
+    ssJsonResponse: unknown,
     fileName: string,
+    sourceWorkbook?: ExcelJS.Workbook,
 ): Promise<void> {
-    const workbookData = extractWorkbookData(jsonResponse)
-    const wb = new ExcelJS.Workbook()
-    wb.creator = 'Excel Sheet App'
-    wb.created = new Date()
+    const payload = ssJsonResponse as Record<string, unknown>
+    const jsonData = (payload.jsonObject ?? payload) as Record<string, unknown>
+    const wbData =
+        (jsonData.Workbook as Record<string, unknown> | undefined) ??
+        (jsonData.workbook as Record<string, unknown> | undefined)
 
-    for (const sheet of workbookData.sheets) {
-        const ws = wb.addWorksheet(sheet.name || 'Sheet')
+    if (!wbData?.sheets) {
+        throw new Error('No sheet data found in Spreadsheet JSON.')
+    }
 
-        for (const row of sheet.rows) {
-            const rowValues: (string | number | boolean | null)[] = []
-            for (const cell of row.cells) {
-                rowValues.push(cell.value ?? null)
-            }
-            if (rowValues.some((v) => v !== null)) {
-                ws.addRow(rowValues)
+    const sheetsArr = wbData.sheets as Array<Record<string, unknown> | null | undefined>
+    const workbook = sourceWorkbook ?? new ExcelJS.Workbook()
+
+    for (const sheetJson of sheetsArr) {
+        if (!sheetJson) continue
+
+        const sheetName = (sheetJson.name as string) || 'Sheet1'
+        const rowsArr =
+            (sheetJson.rows as Array<Record<string, unknown> | null | undefined>) ?? []
+
+        let worksheet = workbook.getWorksheet(sheetName)
+        if (!worksheet) {
+            worksheet = workbook.addWorksheet(sheetName)
+        }
+
+        const colsArr =
+            (sheetJson.columns as Array<Record<string, unknown> | null | undefined>) ?? []
+        for (let colPos = 0; colPos < colsArr.length; colPos++) {
+            const colDef = colsArr[colPos]
+            if (!colDef) continue
+            const idx =
+                typeof colDef.index === 'number' ? (colDef.index as number) : colPos
+            if (idx == null || isNaN(idx)) continue
+            const colNum = idx + 1
+            const w = colDef.width as number | undefined
+            if (w && colNum > 0) {
+                try {
+                    worksheet.getColumn(colNum).width = Math.round(w / 7.5)
+                } catch {
+                    // non-critical
+                }
             }
         }
 
-        ws.columns.forEach((column) => {
-            let maxLength = 10
-            column.eachCell?.({ includeEmpty: false }, (cell) => {
-                const cellLen = cell.value ? String(cell.value).length : 0
-                if (cellLen > maxLength) maxLength = cellLen
-            })
-            column.width = Math.min(maxLength + 2, 50)
-        })
+        for (let rowPos = 0; rowPos < rowsArr.length; rowPos++) {
+            const rowDef = rowsArr[rowPos]
+            if (!rowDef) continue
+
+            const rowIdx =
+                typeof rowDef.index === 'number' ? (rowDef.index as number) : rowPos
+            if (rowIdx == null || isNaN(rowIdx)) continue
+            const rowNum = rowIdx + 1
+            if (rowNum < 1) continue
+
+            const wsRow = worksheet.getRow(rowNum)
+
+            const rowHeight = rowDef.height as number | undefined
+            if (rowHeight && rowHeight > 0) {
+                wsRow.height = rowHeight
+            }
+
+            const cells =
+                (rowDef.cells as Array<Record<string, unknown> | null | undefined>) ?? []
+
+            for (let cellPos = 0; cellPos < cells.length; cellPos++) {
+                const cellDef = cells[cellPos]
+                if (!cellDef) continue
+
+                const colIdx =
+                    typeof cellDef.index === 'number'
+                        ? (cellDef.index as number)
+                        : cellPos
+                if (colIdx == null || isNaN(colIdx)) continue
+                const colNum = colIdx + 1
+                if (colNum < 1) continue
+
+                const cell = wsRow.getCell(colNum)
+
+                if (typeof cellDef.formula === 'string' && cellDef.formula.trim()) {
+                    cell.value = {
+                        formula: cellDef.formula as string,
+                    } as CellFormulaValue
+                } else if (cellDef.value !== undefined) {
+                    try {
+                        if (!cell.isMerged || cell.address === cell.master?.address) {
+                            cell.value = toPrimitive(cellDef.value)
+                        }
+                    } catch {
+                        cell.value = toPrimitive(cellDef.value)
+                    }
+                }
+
+                if (cellDef.format && !cell.numFmt) {
+                    cell.numFmt = cellDef.format as string
+                }
+
+                if (!sourceWorkbook) {
+                    applyStyleFromJson(cell, cellDef)
+                }
+            }
+
+            wsRow.commit()
+        }
     }
 
-    const buffer = await wb.xlsx.writeBuffer()
+    const buffer = await workbook.xlsx.writeBuffer()
     const blob = new Blob([buffer], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     })
     saveAs(blob, `${fileName}.xlsx`)
 }
 
-interface CellData {
-    value: string | number | boolean | null
-    formula?: string
-}
-
-interface RowData {
-    index: number
-    cells: CellData[]
-}
-
-interface SheetData {
-    name: string
-    rows: RowData[]
-}
-
-interface WorkbookExtract {
-    sheets: SheetData[]
-}
-
-function extractWorkbookData(jsonResponse: unknown): WorkbookExtract {
-    const sheets: SheetData[] = []
-
-    const root = jsonResponse as Record<string, unknown>
-    const jsonObject = (root?.jsonObject ?? root) as Record<string, unknown>
-    const workbook = (jsonObject?.Workbook ?? jsonObject) as Record<string, unknown>
-    const rawSheets = (workbook?.sheets ?? []) as Record<string, unknown>[]
-
-    for (const rawSheet of rawSheets) {
-        const sheetName = (rawSheet.name as string) || 'Sheet'
-        const rawRows = (rawSheet.rows ?? []) as Record<string, unknown>[]
-        const rows: RowData[] = []
-
-        for (let rowIdx = 0; rowIdx < rawRows.length; rowIdx++) {
-            const rawRow = rawRows[rowIdx]
-            if (!rawRow) continue
-
-            const rawCells = (rawRow.cells ?? []) as Record<string, unknown>[]
-            const cells: CellData[] = []
-
-            for (const rawCell of rawCells) {
-                if (!rawCell) {
-                    cells.push({ value: null })
-                    continue
-                }
-
-                const formula = rawCell.formula as string | undefined
-                let value: string | number | boolean | null = null
-
-                if (rawCell.value !== undefined && rawCell.value !== null) {
-                    value = rawCell.value as string | number | boolean
-                }
-
-                cells.push({ value, formula })
-            }
-
-            rows.push({ index: rowIdx, cells })
+function toPrimitive(val: unknown): ExcelJS.CellValue {
+    if (val === null || val === undefined) return null
+    if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') {
+        return val
+    }
+    if (val instanceof Date) return val
+    if (typeof val === 'object') {
+        const obj = val as Record<string, unknown>
+        if ('formula' in obj) {
+            return { formula: obj.formula as string } as CellFormulaValue
         }
+        return String(val)
+    }
+    return String(val)
+}
 
-        sheets.push({ name: sheetName, rows })
+function applyStyleFromJson(
+    cell: ExcelJS.Cell,
+    cellDef: Record<string, unknown>,
+): void {
+    const style = cellDef.style as Record<string, unknown> | undefined
+    if (!style) return
+
+    if (style.fontWeight === 'bold' || style.fontFamily || style.fontSize || style.color) {
+        cell.font = {
+            ...cell.font,
+            bold: style.fontWeight === 'bold' || cell.font?.bold,
+            name: (style.fontFamily as string) ?? cell.font?.name ?? 'Calibri',
+            size: (style.fontSize as number) ?? cell.font?.size ?? 11,
+            color: style.color
+                ? { argb: (style.color as string).replace('#', 'FF') }
+                : cell.font?.color,
+        }
     }
 
-    if (sheets.length === 0) {
-        sheets.push({ name: 'Sheet1', rows: [] })
+    if (style.textAlign || style.verticalAlign) {
+        cell.alignment = {
+            ...cell.alignment,
+            horizontal: mapAlignment(style.textAlign as string),
+            vertical: mapVerticalAlignment(style.verticalAlign as string),
+            wrapText: (style.whiteSpace as string) === 'normal' || cell.alignment?.wrapText,
+        }
     }
 
-    return { sheets }
+    if (style.backgroundColor) {
+        const bg = (style.backgroundColor as string).replace('#', '')
+        cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: `FF${bg}` },
+        }
+    }
+
+    if (style.borderTop || style.borderBottom || style.borderLeft || style.borderRight) {
+        cell.border = {
+            top: parseBorder(style.borderTop as string) ?? cell.border?.top,
+            bottom: parseBorder(style.borderBottom as string) ?? cell.border?.bottom,
+            left: parseBorder(style.borderLeft as string) ?? cell.border?.left,
+            right: parseBorder(style.borderRight as string) ?? cell.border?.right,
+        }
+    }
+}
+
+function mapAlignment(align?: string): ExcelJS.Alignment['horizontal'] | undefined {
+    if (!align) return undefined
+    const map: Record<string, ExcelJS.Alignment['horizontal']> = {
+        left: 'left',
+        center: 'center',
+        right: 'right',
+    }
+    return map[align]
+}
+
+function mapVerticalAlignment(align?: string): ExcelJS.Alignment['vertical'] | undefined {
+    if (!align) return undefined
+    const map: Record<string, ExcelJS.Alignment['vertical']> = {
+        top: 'top',
+        middle: 'middle',
+        bottom: 'bottom',
+    }
+    return map[align]
+}
+
+function parseBorder(borderStr?: string): ExcelJS.Border | undefined {
+    if (!borderStr) return undefined
+    return { style: 'thin', color: { argb: 'FF000000' } }
 }
