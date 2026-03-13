@@ -5,7 +5,7 @@ const wb = new ExcelJS.Workbook()
 await wb.xlsx.readFile(filePath)
 
 const sourceWs = wb.getWorksheet('Input Sheet')
-const targetWs = wb.getWorksheet('Project Input')
+const targetWs = wb.getWorksheet("Input Sheet -W'Gas")
 
 if (!sourceWs || !targetWs) {
   console.error('Worksheets not found')

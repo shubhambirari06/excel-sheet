@@ -28,8 +28,6 @@ export const ecmRows = [
   },
 ];
 
-export const ecmSummaryRows = [];
-
 export const hvacRows = [
   {
     Unit: "AHU #1",
@@ -123,18 +121,6 @@ export const freezerRows = [
     CoolingEffKWPerTon: 1.2,
     FanMotorHP: 0.066666667,
     FanMotorKW: 0.05,
-  },
-];
-
-export const ecm1DetailOverviewRows = [
-  {
-    ECM: "ECM-1",
-    Description: "Optimize HVAC Scheduling",
-    "Estimated Cost ($)": 10500,
-    "Natural Gas Savings (Therm/yr)": 6134.32,
-    "Electric Savings (kWh/yr)": 174732,
-    "Cost Savings ($/yr)": 28942.46,
-    "Simple Payback (years)": 0.36,
   },
 ];
 
@@ -256,121 +242,65 @@ export const ecm1InputVariables = [
 export const ecm1Equations = [
   {
     "Equations & Variables": "Cooling Savings (kWh)",
-    Equation: "=Tons*(12/EER)*Bin Hours",
+    Equation: "'=Tons*(12/EER)*Bin Hours",
   },
   {
     "Equations & Variables": "Heating Savings (kWh)",
-    Equation: "=Heat Capacity*Bin Hours*Load%",
-  },
-];
-
-export const ecm1AHUEquipmentSummary = [
-  {
-    "AHU Equipment Values": "Cooling Tonnage",
-    "AHU #1": 39.1,
-    "AHU #2": 61.6,
-    "AHU #3": 66.5,
-    "AHU #4": 17.6,
-    "AHU #5": 2.6,
-    "AHU #6": 7.5,
-    "AHU #7": 3.4,
-  },
-  {
-    "AHU Equipment Values": "EER (Proposed)",
-    "AHU #1": 11.3,
-    "AHU #2": 11.3,
-    "AHU #3": 11.3,
-    "AHU #4": 11.3,
-    "AHU #5": 11.3,
-    "AHU #6": 11.3,
-    "AHU #7": 11.3,
-  },
-  {
-    "AHU Equipment Values": "Heating Capacity (MBH)",
-    "AHU #1": 469.2,
-    "AHU #2": 739.2,
-    "AHU #3": 798.0,
-    "AHU #4": 211.2,
-    "AHU #5": 31.2,
-    "AHU #6": 90.0,
-    "AHU #7": 40.8,
-  },
-  {
-    "AHU Equipment Values": "Heating Efficiency",
-    "AHU #1": 0.85,
-    "AHU #2": 0.85,
-    "AHU #3": 0.85,
-    "AHU #4": 0.85,
-    "AHU #5": 0.85,
-    "AHU #6": 0.85,
-    "AHU #7": 0.85,
-  },
-  {
-    "AHU Equipment Values": "Supply Fan HP",
-    "AHU #1": 20.0,
-    "AHU #2": 20.0,
-    "AHU #3": 20.0,
-    "AHU #4": 5.0,
-    "AHU #5": 0.75,
-    "AHU #6": 5.0,
-    "AHU #7": 1.0,
-  },
-  {
-    "AHU Equipment Values": "Supply Fan Units",
-    "AHU #1": 1.0,
-    "AHU #2": 1.0,
-    "AHU #3": 1.0,
-    "AHU #4": 1.0,
-    "AHU #5": 1.0,
-    "AHU #6": 1.0,
-    "AHU #7": 1.0,
-  },
-  {
-    "AHU Equipment Values": "Electric Heat",
-    "AHU #1": "No",
-    "AHU #2": "No",
-    "AHU #3": "No",
-    "AHU #4": "No",
-    "AHU #5": "No",
-    "AHU #6": "No",
-    "AHU #7": "No",
+    Equation: "'=Heat Capacity*Bin Hours*Load%",
   },
 ];
 
 export const ecm1EnergyCostSavings = [
   {
     AHU: "AHU #1",
-    HeatingSavingsTherms: 3329,
+    HeatingSavingsTherms: 3328.56,
     HeatingCostSavings: 4327.13,
     Spacer: "",
-    CoolingSavingsKwh: 28284,
-    CoolingCostSavings: 3394.08,
-    TotalCostSavings: 7721.21,
+    CoolingSavingsKwh: null,
+    CoolingCostSavings: null,
+    TotalCostSavings: null,
   },
   {
-    AHU: "AHU #2",
-    HeatingSavingsTherms: 0,
-    HeatingCostSavings: 0,
+    AHU: "AHU #3",
+    HeatingSavingsTherms: 2781.73,
+    HeatingCostSavings: 3616.25,
     Spacer: "",
-    CoolingSavingsKwh: 0,
-    CoolingCostSavings: 0,
-    TotalCostSavings: 0,
+    CoolingSavingsKwh: null,
+    CoolingCostSavings: null,
+    TotalCostSavings: null,
+  },
+  {
+    AHU: "AHU #5",
+    HeatingSavingsTherms: 10.41,
+    HeatingCostSavings: 13.54,
+    Spacer: "",
+    CoolingSavingsKwh: null,
+    CoolingCostSavings: null,
+    TotalCostSavings: null,
+  },
+  {
+    AHU: "AHU #7",
+    HeatingSavingsTherms: 13.62,
+    HeatingCostSavings: 17.7,
+    Spacer: "",
+    CoolingSavingsKwh: null,
+    CoolingCostSavings: null,
+    TotalCostSavings: null,
   },
   {
     AHU: "TOTAL",
-    HeatingSavingsTherms: 6135,
+    HeatingSavingsTherms: 6134,
     HeatingCostSavings: 7974.62,
     Spacer: "",
-    CoolingSavingsKwh: 174732,
-    CoolingCostSavings: 20967.84,
-    TotalCostSavings: 28942.46,
+    CoolingSavingsKwh: null,
+    CoolingCostSavings: null,
+    TotalCostSavings: null,
   },
 ];
 
 export const ecm1TotalSavings = [
   { "Total Savings": "Total Heating Savings (Therms)", Value: 6134.32 },
-  { "Total Savings": "Total Cooling Savings (kWh)", Value: 174732 },
-  { "Total Savings": "Total Cost Savings ($)", Value: 28942.46 },
+  { "Total Savings": "Dollars", Value: 7974.62 },
 ];
 
 const binDataKeys = {
